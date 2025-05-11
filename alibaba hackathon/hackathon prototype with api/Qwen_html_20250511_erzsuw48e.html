@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spaced Learning Quiz Calendar</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .calendar {
+      margin-top: 1rem;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      justify-items: center;
+    }
+
+    .day {
+      width: 60px;
+      height: 60px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: #fff;
+    }
+
+    .day.retest {
+      background-color: #ffeeba;
+    }
+
+    .day.completed {
+      background-color: #d4edda;
+    }
+
+    .day span.date {
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    .day span.score {
+      font-size: 0.8rem;
+      color: green;
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Spaced Learning Quiz Tracker</h1>
+
+  <div class="container">
+    <p>Click below to take the quiz. Your progress will be tracked using spaced repetition intervals.</p>
+    <button onclick="startQuiz()">Take Quiz</button>
+
+    <div class="calendar" id="calendar"></div>
+  </div>
+
+  <!-- Quiz Modal -->
+  <div id="quizModal" style="display:none; position:fixed; top:10%; left:10%; right:10%; background:white; padding:2rem; z-index:10; box-shadow:0 0 10px #ccc;">
+    <h2>Quiz Time!</h2>
+    <div id="quizContainer"></div>
+    <button onclick="submitQuiz()">Submit Quiz</button>
+    <button onclick="closeQuiz()">Close</button>
+  </div>
+
+  <script>
+    const today = new Date();
+    const spacedIntervals = [0, 1, 6, 24, 72, 168]; // hours from first quiz
+    let quizAttempts = []; // { date: Date, score: int }
+
+    function generateMockQuiz() {
+      return [
+        {
+          question: "What is the capital of France?",
+          options: ["Paris", "Berlin", "Madrid", "Rome"],
+          correctAnswer: "Paris"
+        },
+        {
+          question: "Which planet is known as the Red Planet?",
+          options: ["Earth", "Mars", "Jupiter", "Saturn"],
+          correctAnswer: "Mars"
+        },
+        {
+          question: "Who wrote 'To Kill a Mockingbird'?",
+          options: ["Harper Lee", "George Orwell", "Ernest Hemingway", "Mark Twain"],
+          correctAnswer: "Harper Lee"
+        }
+      ];
+    }
+
+    async function startQuiz() {
+      document.getElementById('quizModal').style.display = 'block';
+      renderQuiz(generateMockQuiz());
+    }
+
+    function closeQuiz() {
+      document.getElementById('quizModal').style.display = 'none';
+    }
+
+    function submitQuiz() {
+      const score = calculateScore();
+      const attempt = {
+        date: new Date(),
+        score
+      };
+
+      quizAttempts.push(attempt);
+      scheduleRetests(attempt.date);
+
+      alert(`You scored ${score} / ${generateMockQuiz().length}`);
+      closeQuiz();
+      renderCalendar();
+    }
+
+    function calculateScore() {
+      const quiz = generateMockQuiz();
+      let score = 0;
+      quiz.forEach((q, i) => {
+        const selected = document.querySelector(`input[name="q${i}"]:checked`);
+        if (selected && selected.value === q.correctAnswer) {
+          score++;
+        }
+      });
+      return score;
+    }
+
+    function renderQuiz(quiz) {
+      const container = document.getElementById("quizContainer");
+      container.innerHTML = '';
+
+      quiz.forEach((q, index) => {
+        const optionsHTML = q.options.map((opt, i) => `
+          <label>
+            <input type="radio" name="q${index}" value="${opt}">
+            ${opt}
+          </label><br/>
+        `).join('');
+
+        container.innerHTML += `<strong>Q${index + 1}: ${q.question}</strong><br/>${optionsHTML}<br/>`;
+      });
+    }
+
+    function scheduleRetests(startDate) {
+      const retests = spacedIntervals.map(h => {
+        const nextDate = new Date(startDate);
+        nextDate.setHours(nextDate.getHours() + h);
+        return nextDate;
+      });
+
+      localStorage.setItem('retests', JSON.stringify(retests));
+    }
+
+    function renderCalendar() {
+      const calendar = document.getElementById("calendar");
+      calendar.innerHTML = '';
+
+      const daysToShow = 7;
+      const now = new Date();
+
+      for (let i = 0; i < daysToShow; i++) {
+        const dayDiv = document.createElement("div");
+        const currentDate = new Date();
+        currentDate.setDate(today.getDate() + i);
+
+        const dateString = currentDate.toDateString();
+        const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'short' });
+        const dateNum = currentDate.getDate();
+
+        // Check if this is a retest day
+        let isRetest = false;
+        const retestDates = JSON.parse(localStorage.getItem('retests') || '[]');
+        if (retestDates.some(d => new Date(d).toDateString() === currentDate.toDateString())) {
+          isRetest = true;
+        }
+
+        // Mark completed quizzes
+        const completed = quizAttempts.some(a => a.date.toDateString() === currentDate.toDateString());
+
+        dayDiv.className = `day ${isRetest ? 'retest' : ''} ${completed ? 'completed' : ''}`;
+        dayDiv.innerHTML = `
+          <span class="date">${dayName}<br>${dateNum}</span>
+          ${completed ? `<span class="score">✅ Score: ${quizAttempts.find(a => a.date.toDateString() === currentDate.toDateString())?.score || '?'}</span>` : ''}
+        `;
+        calendar.appendChild(dayDiv);
+      }
+    }
+
+    // Initial render
+    renderCalendar();
+  </script>
+</body>
+</html>

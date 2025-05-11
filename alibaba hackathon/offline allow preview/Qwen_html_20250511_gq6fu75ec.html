@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Offline AI Quiz Practice</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 650px;
+      text-align: left;
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .question-block {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #f9f9f9;
+      border-left: 5px solid #007bff;
+    }
+
+    .option {
+      display: block;
+      margin: 0.5rem 0;
+    }
+
+    .feedback {
+      margin-top: 0.5rem;
+      font-weight: bold;
+    }
+
+    .score-display {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      color: green;
+    }
+
+    input[type="radio"] {
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Offline AI Quiz Practice</h1>
+  <div class="container">
+    <p>This quiz is loaded from local data — no internet required.</p>
+    <button onclick="renderQuiz()">Start Quiz</button>
+
+    <div id="quizContainer"></div>
+    <div class="score-display" id="scoreDisplay"></div>
+  </div>
+
+  <script>
+    // Hardcoded quiz data (mock response)
+    const quizData = [
+      {
+        question: "What is the capital of France?",
+        options: ["Paris", "Berlin", "Madrid", "Rome"],
+        correctAnswer: "Paris"
+      },
+      {
+        question: "Which planet is known as the Red Planet?",
+        options: ["Earth", "Mars", "Jupiter", "Saturn"],
+        correctAnswer: "Mars"
+      },
+      {
+        question: "Who wrote 'To Kill a Mockingbird'?",
+        options: ["Harper Lee", "George Orwell", "Ernest Hemingway", "Mark Twain"],
+        correctAnswer: "Harper Lee"
+      },
+      {
+        question: "What is the largest ocean on Earth?",
+        options: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+        correctAnswer: "Pacific Ocean"
+      },
+      {
+        question: "What is 5 x 6?",
+        options: ["25", "30", "35", "40"],
+        correctAnswer: "30"
+      }
+    ];
+
+    function renderQuiz() {
+      const quizContainer = document.getElementById('quizContainer');
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      quizContainer.innerHTML = '';
+      scoreDisplay.innerHTML = '';
+
+      quizData.forEach((q, index) => {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'question-block';
+
+        const optionsHTML = q.options.map((opt, i) => `
+          <label class="option">
+            <input type="radio" name="q${index}" value="${opt}" onchange="handleAnswer(${index}, '${opt}')">
+            ${opt}
+          </label>
+        `).join('');
+
+        questionDiv.innerHTML = `
+          <strong>Q${index + 1}: ${q.question}</strong>
+          <div class="options">${optionsHTML}</div>
+          <div class="feedback" id="feedback-${index}"></div>
+        `;
+
+        quizContainer.appendChild(questionDiv);
+      });
+
+      updateScore(); // initialize score
+    }
+
+    function handleAnswer(qIndex, selectedAnswer) {
+      const correctAnswer = quizData[qIndex].correctAnswer;
+      const feedbackEl = document.getElementById(`feedback-${qIndex}`);
+      const isCorrect = selectedAnswer === correctAnswer;
+
+      if (isCorrect) {
+        feedbackEl.textContent = "✅ Correct!";
+        feedbackEl.style.color = "green";
+      } else {
+        feedbackEl.textContent = `❌ Incorrect. Correct answer: ${correctAnswer}`;
+        feedbackEl.style.color = "red";
+      }
+
+      updateScore();
+    }
+
+    function updateScore() {
+      let correctCount = 0;
+      quizData.forEach((q, index) => {
+        const selected = document.querySelector(`input[name="q${index}"]:checked`);
+        if (selected && selected.value === q.correctAnswer) {
+          correctCount++;
+        }
+      });
+
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      scoreDisplay.innerHTML = `Score: ${correctCount} / ${quizData.length}`;
+    }
+  </script>
+</body>
+</html>
